@@ -45,9 +45,14 @@ import Botao from './Botao.vue'
         </div>
     </div>
     <div class="container-botoes">
-        <p>Execução</p>
+        <p>Execução por fases</p>
+        <!--
         <Botao class="botao" texto="Passo a passo" />
-        <Botao class="botao" texto="Imediata"/>
+        <Botao class="botao" texto="Completa"/>
+    -->
+        <Botao class="botao" texto="1. Computação" />
+        <Botao class="botao" texto="2. Cópia"/>
+        <Botao class="botao" texto="3. Reconstrução"/>
     </div>
 </template>
 
