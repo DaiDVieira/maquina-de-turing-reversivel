@@ -33,7 +33,6 @@ import Botao from './Botao.vue'
         </div>
 
         <div class="conteiner-maq">
-            
             <div class="container-fita">
                 <p class="tipo-fita">Fita de entrada</p>
                 <div v-for="(celula, index) in fitaEntrada" :key="index" :class="['celula', {'cabeçote-ativo': index == posicaoCabecoteEntrada}]">
