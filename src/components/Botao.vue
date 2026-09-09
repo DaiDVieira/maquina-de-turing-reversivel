@@ -21,6 +21,8 @@ function clique(){
 .botao{
     padding: 8px;
     border-radius: 8px;
+    width: 150px;
+    text-align: left;
     cursor: pointer;
     background: #4155c8;
     color: #d6d4d7;

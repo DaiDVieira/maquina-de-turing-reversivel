@@ -2,8 +2,8 @@
 import {ref} from 'vue'
 import Botao from './Botao.vue'
     const fitaEntrada = ref([])
-    const fitaHistorico = ref([])
-    const fitaSaida = ref([])
+    const fitaHistorico = ref(["_", "_", "_", "_", "_", "_", "_", "_", "_", "_"])
+    const fitaSaida = ref(["_", "_", "_", "_", "_", "_", "_", "_", "_", "_"])
     const posicaoCabecoteEntrada = ref(0)
     const posicaoCabecoteHistorico = ref(0)
     const posicaoCabecoteSaida = ref(0)
@@ -18,6 +18,18 @@ import Botao from './Botao.vue'
         <div class="entrada-maq">
             <p>Digite a cadeia de entrada</p>
             <input type="text" v-model="fitaEntrada">
+        </div>
+
+        <p>Execução por fases</p>
+       <div class="container-botoes">
+            
+            <!--
+            <Botao class="botao" texto="Passo a passo" />
+            <Botao class="botao" texto="Completa"/>
+            -->
+            <Botao class="botao" texto="1. Computação" />
+            <Botao class="botao" texto="2. Cópia"/>
+            <Botao class="botao" texto="3. Reconstrução"/>
         </div>
 
         <div class="conteiner-maq">
@@ -43,16 +55,6 @@ import Botao from './Botao.vue'
                 </div>
             </div>
         </div>
-    </div>
-    <div class="container-botoes">
-        <p>Execução por fases</p>
-        <!--
-        <Botao class="botao" texto="Passo a passo" />
-        <Botao class="botao" texto="Completa"/>
-    -->
-        <Botao class="botao" texto="1. Computação" />
-        <Botao class="botao" texto="2. Cópia"/>
-        <Botao class="botao" texto="3. Reconstrução"/>
     </div>
 </template>
 
@@ -98,5 +100,6 @@ import Botao from './Botao.vue'
 
 .botao{
     margin: 10px;
+    margin-bottom: 10px;
 }
 </style>
