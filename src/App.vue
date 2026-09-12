@@ -1,19 +1,22 @@
 <script setup>
 import Arquivo from './components/Arquivo.vue';
 import MaquinaTuring from  './components/MaquinaTuring.vue'
+import Navbar from './components/Barra.vue'
+import Seletor from './components/Seletor.vue'
+
 </script>
 
 <template>
-  <div class="titulo">
-    <h1>Simulador de Máquina de Turing Reversível</h1>
+  <Navbar/>
+  <div class="site">
+    <Seletor/>
+    <Arquivo />
+    <MaquinaTuring />
   </div>
-  <Arquivo />
-  <MaquinaTuring />
-  
 </template>
 
 <style scoped>
-.titulo{
-  text-align: center;
+.site{
+  margin: 2%;
 }
 </style>

@@ -19,12 +19,22 @@ function clique(){
 
 <style scoped lang="css">
 .botao{
-    padding: 8px;
-    border-radius: 8px;
     width: 150px;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
-    background: #4155c8;
-    color: #d6d4d7;
+    background-color: #4155c8;
+    color: #fcf5f5;
+    font-weight: bold;
+    font-size: 15px;
+    font-family: 'Times New Roman', Times, serif;
+    display: inline-block;
+    padding: 10px 20px;
+    margin-left: 10px;
+    border-radius: 6px;   
+    border: 0;
+}
+
+.botao:hover{
+    background-color: #214D71;
 }
 </style>
