@@ -2,6 +2,14 @@
 import {ref} from 'vue'
 import Botao from './Botao.vue'
 
+const props = defineProps({
+    estados: { type: Array, default: () => [] },
+    alfEntrada: { type: Array, default: () => [] },
+    alfFita: { type: Array, default: () => [] },
+    quintuplas: { type: Array, default: () => [] },
+    entrada: { type: String, default: '' },
+})
+
 const fitaEntrada = ref(["_", "_", "_", "_", "_", "_", "_", "_", "_", "_"])
 //ver se símbolo de branco sempre será o último na definição do alfabeto. mudar na inicialização das fitas
 const fitaHistorico = ref(["_", "_", "_", "_", "_", "_", "_", "_", "_", "_"])
@@ -26,7 +34,7 @@ function escreveSimbolo(){
     <div class="maquina">
         <div class="entrada-maq">
             <p>Cadeia de entrada</p>
-           <!--Aqui vai a string lida na última linha do arquivo-->
+            <p>{{ props.entrada }}</p>
         </div>
         <!--
         <div class="entrada-maq">

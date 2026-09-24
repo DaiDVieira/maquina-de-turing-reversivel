@@ -11,7 +11,7 @@
     <div class="cont-arq">
         <div class="arq">
             <h3>Quintuplas</h3>
-            <pre> {{ conteudo }}</pre>
+            <pre>{{ quintuplas.join('\n') }}</pre>
         </div>
         
         <div class="arq">
@@ -23,10 +23,15 @@
 
 <script setup>
 import {ref} from 'vue'
-import Botao from './Botao.vue'
 
 const nomeArquivo = ref('')
 const conteudo = ref('')
+const estados = ref([])
+const alfEntrada = ref([])
+const alfFita = ref([])
+const quintuplas = ref([])
+const entrada = ref('')
+const emitir = defineEmits(['dados-atualizados'])
 
 function lerArquivo(evento){
     const arquivo = evento.target.files[0]
@@ -34,10 +39,34 @@ function lerArquivo(evento){
 
     const leitor = new FileReader()
     leitor.onload = (e) => {
-        conteudo.value = e.target.result;
+        conteudo.value = e.target.result
         nomeArquivo.value = arquivo.name
+        dividirElementos()
     }
     leitor.readAsText(arquivo)
+}
+
+function dividirElementos(){
+    const linhas = conteudo.value.split(/\r?\n/).map(linha => linha.trim())
+    const cabecalho = linhas[0].split(/\s+/)
+    const quantidadeQuintuplas = Number(cabecalho[3])
+
+    estados.value = linhas[1].split(/\s+/).filter(Boolean)
+    console.log('Estados:', estados.value)
+    alfEntrada.value = linhas[2].split(/\s+/).filter(Boolean)
+    console.log('Alfabeto da entrada:', alfEntrada.value)
+    alfFita.value = linhas[3].split(/\s+/).filter(Boolean)
+    console.log('Alfabeto da fita:', alfFita.value)
+    quintuplas.value = linhas.slice(4, 4 + quantidadeQuintuplas)
+    entrada.value = linhas[4 + quantidadeQuintuplas] ?? ''
+
+    emitir('dados-atualizados', {
+        estados: estados.value,
+        alfEntrada: alfEntrada.value,
+        alfFita: alfFita.value,
+        quintuplas: quintuplas.value,
+        entrada: entrada.value,
+    })
 }
 </script>
 
