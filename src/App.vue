@@ -10,6 +10,7 @@ const dadosMaquina = ref({
   alfEntrada: [],
   alfFita: [],
   quintuplas: [],
+  quadruplas: [],
   entrada: '',
 })
 

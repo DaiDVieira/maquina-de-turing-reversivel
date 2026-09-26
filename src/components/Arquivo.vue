@@ -16,6 +16,7 @@
         
         <div class="arq">
             <h3>Quadruplas</h3>
+            <pre>{{ quadruplas.map(q => q.gerarTexto ? q.textoPadrao : q.texto).join('\n') }}</pre>
         </div>
     </div>
 
@@ -30,6 +31,7 @@ const estados = ref([])
 const alfEntrada = ref([])
 const alfFita = ref([])
 const quintuplas = ref([])
+const quadruplas = ref([])
 const entrada = ref('')
 const emitir = defineEmits(['dados-atualizados'])
 
@@ -47,7 +49,7 @@ function lerArquivo(evento){
 }
 
 function dividirElementos(){
-    const linhas = conteudo.value.split(/\r?\n/).map(linha => linha.trim())
+    const linhas = conteudo.value.split(/\r?\n/).map(linha => linha.trim()).filter(linha => linha.length > 0)
     const cabecalho = linhas[0].split(/\s+/)
     const quantidadeQuintuplas = Number(cabecalho[3])
 
@@ -60,13 +62,95 @@ function dividirElementos(){
     quintuplas.value = linhas.slice(4, 4 + quantidadeQuintuplas)
     entrada.value = linhas[4 + quantidadeQuintuplas] ?? ''
 
+    quadruplas.value = converterQuintuplasParaQuadruplas(quintuplas.value)
+
     emitir('dados-atualizados', {
         estados: estados.value,
         alfEntrada: alfEntrada.value,
         alfFita: alfFita.value,
         quintuplas: quintuplas.value,
+        quadruplas: quadruplas.value,
         entrada: entrada.value,
     })
+}
+
+function converterQuintuplasParaQuadruplas(quintuplasBrutas) {
+    const quadruplasFormatadas = [];
+
+    quintuplasBrutas.forEach((qStr, indiceTransicao) => {
+        const regex = /\(\s*(\d+)\s*,\s*([^)]+)\s*\)\s*=\s*\(\s*(\d+)\s*,\s*([^)]+)\s*,\s*([LRS])\s*\)/;
+        const match = qStr.match(regex);
+
+        if (!match) {
+            quadruplasFormatadas.push({
+                tipo: 'outro',
+                texto: qStr
+            });
+            return;
+        }
+
+        const [
+            ,
+            estadoAtual,
+            simboloLido,
+            proximoEstado,
+            simboloEscrito,
+            movimento
+        ] = match;
+
+
+        const estado = estadoAtual.trim();
+        const lido = simboloLido.trim();
+        const escrito = simboloEscrito.trim();
+        const proximo = proximoEstado.trim();
+        const direcao = movimento.trim();
+
+        const estadoIntermediario =`${estado}_${proximo}_${lido}`; //o que sera escrito na fita de historico
+
+       //primeira quadrupla
+        quadruplasFormatadas.push({
+            tipo: 'escrever',
+            indiceTransicao,
+            estadoOrigem: estado,
+            simboloLido: lido,
+            simboloEscrito: escrito,
+            estadoIntermediario,
+            texto:
+                `(${estado}, ${lido}) = ` +
+                `(${escrito}, ${estadoIntermediario})`
+        });
+
+        //segunda quadrupla
+        quadruplasFormatadas.push({
+            tipo: 'mover',
+            indiceTransicao,
+            estadoIntermediario,
+            simboloEscrito: escrito,
+            movimento: direcao,
+            proximoEstado: proximo,
+            estadoOrigem: estado,
+            simboloLido: lido,
+
+            //texto da div de quadruplas considerando as 3 fitas
+            gerarTexto: (fitaE, posE, fitaH, posH, fitaS, posS) => {
+                const valE = fitaE?.[posE] ?? 'B';
+                const valH = fitaH?.[posH] ?? 'B';
+                const valS = fitaS?.[posS] ?? 'B';
+                return (
+                    `(${estadoIntermediario}, ` +
+                    `{${valE}, ${valH}, ${valS}}) = ` +
+                    `(${direcao}, ${proximo})`
+                );
+            },
+
+            textoPadrao:
+                `(${estadoIntermediario}, ` +
+                `{${lido}, B, B}) = ` +
+                `(${direcao}, ${proximo})`
+        });
+
+    });
+    return quadruplasFormatadas;
 }
 </script>
 

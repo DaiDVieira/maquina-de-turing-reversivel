@@ -10,6 +10,7 @@ const emite = defineEmits(['acao'])
 
 function clique(){
     console.log('Clique no botao')
+    emite('acao')
 }
 </script>
 
