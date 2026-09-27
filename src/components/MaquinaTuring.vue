@@ -26,6 +26,7 @@ const estadoAtual = ref('1') //assume-se que sempre sera 1
 const estadoAceitacao = computed(() => {
     return props.estados.length > 0 ? props.estados[props.estados.length - 1] : ''
 })
+const quadruplasCopia = ref([])
 
 watch(() => props.estados, (novosEstados) => {
         if(novosEstados && novosEstados.length > 0){
@@ -47,16 +48,20 @@ watch(() => props.entrada, () => {
     }
 );
 
+function listaQuadruplasAtiva() {
+    return faseExecucao.value === 1 ? props.quadruplas : quadruplasCopia.value;
+}
+
 function encontrarQuadruplaEscrita() {
     const simboloLido = fitaEntrada.value[posicaoCabecoteEntrada.value] ?? 'B';
 
-    return props.quadruplas.find(q => {
+    return listaQuadruplasAtiva().find(q => {
         return (q.tipo === 'escrever' && q.estadoOrigem === String(estadoAtual.value).trim() && q.simboloLido === String(simboloLido).trim());
     });
 }
 
 function encontrarQuadruplaMovimento(indiceTransicao) {
-    return props.quadruplas.find(q => {
+    return listaQuadruplasAtiva().find(q => {
         return (q.tipo === 'mover' && q.indiceTransicao === indiceTransicao);
     });
 }
@@ -118,8 +123,16 @@ function executarUmaTransicao() {
     return true;
 }
 
-function executarFaseComputacao() {
-    executarUmaTransicao();
+function executarUmPasso() {
+    if (faseExecucao.value === 1) {
+        executarUmaTransicao();
+    } else if (faseExecucao.value === 2) {
+        if (quadruplasCopia.value.length === 0) {
+            posicaoCabecoteEntrada.value = 0; //garante inicio da copia na posicao 0
+            gerarQuadruplasCopia();
+        }
+        executarUmaTransicaoCopia();
+    }
 }
 
 function executarComputacaoCompleta() {
@@ -144,8 +157,115 @@ function executarComputacaoCompleta() {
     console.log(`Computação finalizada após ` +`${passosExecutados} transições.`);
 }
 
-function executarFaseCopia(){
+function gerarQuadruplasCopia() {
+    let n = 0;
+    while (n < tamanhoFitaPadrao && fitaEntrada.value[n] !== 'B') {
+        n++;
+    }
 
+    const novasQuadruplas = [];
+    for (let i = 0; i < n; i++) {
+        const simbolo = fitaEntrada.value[i];
+        const estadoOrigem = (i === 0) ? estadoAceitacao.value : `copia_${i}`;
+        const estadoIntermediario = `copia_${i}_int`;
+        const proximoEstado = (i === n - 1) ? 'copia_fim' : `copia_${i + 1}`;
+
+        novasQuadruplas.push({
+            tipo: 'escrever',
+            indiceTransicao: `copia_${i}`,
+            estadoOrigem,
+            simboloLido: simbolo,
+            simboloEscrito: simbolo, //re-escreve na fita de entrada (idempotente)
+            simboloEscritoSaida: simbolo, //escreve na fita de saida
+            estadoIntermediario,
+            texto: `(${estadoOrigem}, ${simbolo}) = (${simbolo}, ${estadoIntermediario})`,
+        });
+
+        novasQuadruplas.push({
+            tipo: 'mover',
+            indiceTransicao: `copia_${i}`,
+            estadoIntermediario,
+            movimento: 'R',
+            proximoEstado,
+            textoPadrao: `(${estadoIntermediario}, {${simbolo}, B, ${simbolo}}) = (R, ${proximoEstado})`,
+        });
+    }
+
+    quadruplasCopia.value = novasQuadruplas;
+}
+
+function executarUmaTransicaoCopia() {
+    if (estadoAtual.value === 'copia_fim') {
+        return false;
+    }
+
+    const quadruplaEscrita = encontrarQuadruplaEscrita();
+    if (!quadruplaEscrita) {
+        alert(`Nenhuma transição de cópia encontrada para o estado ${estadoAtual.value}.`);
+        return false;
+    }
+
+    const quadruplaMovimento = encontrarQuadruplaMovimento(quadruplaEscrita.indiceTransicao);
+    if (!quadruplaMovimento) {
+        alert(`A transição de cópia ${quadruplaEscrita.indiceTransicao} não possui uma quadrupla de movimento.`);
+        return false;
+    }
+
+    //escreve na fita de entrada (idempotente) e na fita de saida
+    const novaFitaEntrada = [...fitaEntrada.value];
+    novaFitaEntrada[posicaoCabecoteEntrada.value] = quadruplaEscrita.simboloEscrito;
+    fitaEntrada.value = novaFitaEntrada;
+
+    const novaFitaSaida = [...fitaSaida.value];
+    novaFitaSaida[posicaoCabecoteSaida.value] = quadruplaEscrita.simboloEscritoSaida;
+    fitaSaida.value = novaFitaSaida;
+
+    estadoAtual.value = quadruplaEscrita.estadoIntermediario;
+
+    //move os cabecotes de entrada e saida (historico nao se move na copia)
+    const movimento = quadruplaMovimento.movimento;
+    if (movimento === 'R') {
+        posicaoCabecoteEntrada.value = Math.min(tamanhoFitaPadrao - 1, posicaoCabecoteEntrada.value + 1);
+        posicaoCabecoteSaida.value = Math.min(tamanhoFitaPadrao - 1, posicaoCabecoteSaida.value + 1);
+    }
+
+    estadoAtual.value = quadruplaMovimento.proximoEstado;
+
+    if (estadoAtual.value === 'copia_fim') {
+        faseExecucao.value = 3;
+    }
+    return true;
+}
+
+function executarFaseCopia(){
+    if (faseExecucao.value !== 2) {
+        return;
+    }
+
+    posicaoCabecoteEntrada.value = 0; //garante inicio da copia na posicao 0
+    gerarQuadruplasCopia();
+
+    if (quadruplasCopia.value.length === 0) {
+        faseExecucao.value = 3;
+        return;
+    }
+
+    let limitePassos = tamanhoFitaPadrao;
+    let passosExecutados = 0;
+
+    while (estadoAtual.value !== 'copia_fim' && passosExecutados < limitePassos) {
+        const executou = executarUmaTransicaoCopia();
+        if (!executou) {
+            break;
+        }
+        passosExecutados++;
+    }
+
+    if (passosExecutados >= limitePassos && estadoAtual.value !== 'copia_fim') {
+        alert('A fase de cópia excedeu o limite de passos permitido.');
+        return;
+    }
+    console.log(`Cópia finalizada após ${passosExecutados} transições.`);
 }
 
 function executarFaseReconstrucao(){
@@ -154,6 +274,7 @@ function executarFaseReconstrucao(){
 
 function executarMaq(){
     executarComputacaoCompleta()
+    executarFaseCopia()
     //criar outras funcoes para executar cada fase
 }
 
@@ -175,6 +296,8 @@ function reiniciarMaquina() {
     posicaoCabecoteEntrada.value = 0;
     posicaoCabecoteHistorico.value = 0;
     posicaoCabecoteSaida.value = 0;
+
+    quadruplasCopia.value = [];
 
     estadoAtual.value = props.estados.length > 0 ? props.estados[0] : '';
 
@@ -202,7 +325,7 @@ function reiniciarMaquina() {
             <p>Controle</p>
             <div class="container-botoes">
                 <Botao texto="Executar" :class="{'ativo': 1}" @acao="executarMaq"/>
-                <Botao texto="Passo a passo" :class="{'ativo': 1}" @acao="executarFaseComputacao"/>
+                <Botao texto="Passo a passo" :class="{'ativo': 1}" @acao="executarUmPasso"/>
                 <Botao texto="Reiniciar" :class="{'ativo': 1}" @acao="reiniciarMaquina"/>
             </div>
         </div>
