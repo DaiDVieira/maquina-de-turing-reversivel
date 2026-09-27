@@ -164,11 +164,12 @@ function gerarQuadruplasCopia() {
     }
 
     const novasQuadruplas = [];
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i <= n; i++) {
         const simbolo = fitaEntrada.value[i];
         const estadoOrigem = (i === 0) ? estadoAceitacao.value : `copia_${i}`;
-        const estadoIntermediario = `copia_${i}_int`;
-        const proximoEstado = (i === n - 1) ? 'copia_fim' : `copia_${i + 1}`;
+        const estadoIntermediario = `copia_${i}`;
+        const proximoEstado = (i === n) ? 'copia_fim' : `copia_${i + 1}`;
+        const transicao = (i === n) ? 'L' : 'R';
 
         novasQuadruplas.push({
             tipo: 'escrever',
@@ -185,9 +186,9 @@ function gerarQuadruplasCopia() {
             tipo: 'mover',
             indiceTransicao: `copia_${i}`,
             estadoIntermediario,
-            movimento: 'R',
+            movimento: transicao,
             proximoEstado,
-            textoPadrao: `(${estadoIntermediario}, {${simbolo}, B, ${simbolo}}) = (R, ${proximoEstado})`,
+            textoPadrao: `(${estadoIntermediario}, {${simbolo}, B, ${simbolo}}) = (${transicao}, ${proximoEstado})`,
         });
     }
 
@@ -227,6 +228,11 @@ function executarUmaTransicaoCopia() {
     if (movimento === 'R') {
         posicaoCabecoteEntrada.value = Math.min(tamanhoFitaPadrao - 1, posicaoCabecoteEntrada.value + 1);
         posicaoCabecoteSaida.value = Math.min(tamanhoFitaPadrao - 1, posicaoCabecoteSaida.value + 1);
+    }
+
+    else if (movimento === 'L') {
+        posicaoCabecoteEntrada.value = Math.max(0, posicaoCabecoteEntrada.value - 1);
+        posicaoCabecoteSaida.value = Math.max(0, posicaoCabecoteSaida.value - 1);
     }
 
     estadoAtual.value = quadruplaMovimento.proximoEstado;
@@ -329,6 +335,20 @@ function reiniciarMaquina() {
                 <Botao texto="Reiniciar" :class="{'ativo': 1}" @acao="reiniciarMaquina"/>
             </div>
         </div>
+        <div>
+            <p>Quádruplas de processamento</p>
+            <div class="cont-process">
+                <div class="process">
+                    <h3>Cópia</h3>
+                    <pre>{{ quadruplasCopia.map(q => q.texto ? q.texto : q.textoPadrao).join('\n') }}</pre>
+                </div>
+                <div class="process">
+                    <h3>Reversão</h3>
+                    <pre></pre>
+                </div>
+            </div>
+        </div>
+        
 
         <p>Fitas</p>
         <p class="paragrafo">Estado atual: {{ estadoAtual }}</p>
@@ -448,5 +468,22 @@ function reiniciarMaquina() {
 
 .botao.ativo:hover{
     background-color: #214d71;
+}
+.process{
+    display: block;
+    align-items: center;
+    padding: 20px;
+    background-color: #d9d9d9;
+    border-radius: 8px;
+    margin: 20px;
+    text-align: center;
+    border: 1px solid #000000;
+}
+
+.cont-process{
+    display: grid;
+    grid-template-columns: 1fr 1fr; 
+    gap: 30px;
+
 }
 </style>
