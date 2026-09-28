@@ -478,7 +478,7 @@ function reiniciarMaquina() {
             <div class="container-botoes">
                 <Botao class="botao" :class="{'ativo': faseExecucao >= 1}" texto="1. Computação" @acao="executarComputacaoCompleta"/>
                 <span class="linha" :class="{'ativo': faseExecucao >= 2}"></span>
-                <Botao class="botao" :class="{'ativo': faseExecucao >= 2}" texto="2. Cópia"/>
+                <Botao class="botao" :class="{'ativo': faseExecucao >= 2}" texto="2. Cópia" @acao="executarFaseCopia"/>
                 <span class="linha" :class="{'ativo': faseExecucao >= 3}"></span>
                 <Botao class="botao" :class="{'ativo': faseExecucao >= 3}" texto="3. Reconstrução" @acao="executarFaseReconstrucao"/>
             </div>
