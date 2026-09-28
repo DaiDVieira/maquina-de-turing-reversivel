@@ -21,12 +21,15 @@ const posicaoCabecoteHistorico = ref(0)
 const posicaoCabecoteSaida = ref(0)
 
 //controle de execucao
-const faseExecucao = ref(1) //computacao = 1, copia = 2, reconstrucao = 3
+const faseExecucao = ref(1) //computacao = 1, copia = 2, reconstrucao = 3, concluido = 4
 const estadoAtual = ref('1') //assume-se que sempre sera 1
 const estadoAceitacao = computed(() => {
     return props.estados.length > 0 ? props.estados[props.estados.length - 1] : ''
 })
 const quadruplasCopia = ref([])
+const quadruplasReversao = ref([])
+
+const movimentoInverso = { R: 'L', L: 'R', S: 'S' }
 
 watch(() => props.estados, (novosEstados) => {
         if(novosEstados && novosEstados.length > 0){
@@ -132,6 +135,11 @@ function executarUmPasso() {
             gerarQuadruplasCopia();
         }
         executarUmaTransicaoCopia();
+    } else if (faseExecucao.value === 3) {
+        if (quadruplasReversao.value.length === 0) {
+            prepararReconstrucao();
+        }
+        executarUmaTransicaoReversao();
     }
 }
 
@@ -274,14 +282,160 @@ function executarFaseCopia(){
     console.log(`Cópia finalizada após ${passosExecutados} transições.`);
 }
 
-function executarFaseReconstrucao(){
+//inverte cada par de quadruplas da computacao: primeiro desfaz o movimento, depois a escrita
+function gerarQuadruplasReversao() {
+    const novasQuadruplas = [];
 
+    props.quadruplas.filter(q => q.tipo === 'mover').forEach(quadruplaMovimento => {
+        const quadruplaEscrita = props.quadruplas.find(q => {
+            return (q.tipo === 'escrever' && q.indiceTransicao === quadruplaMovimento.indiceTransicao);
+        });
+        const estadoIntermediario = quadruplaMovimento.estadoIntermediario;
+        const movimento = movimentoInverso[quadruplaMovimento.movimento];
+
+        novasQuadruplas.push({
+            tipo: 'mover',
+            indiceTransicao: quadruplaMovimento.indiceTransicao,
+            estadoOrigem: quadruplaMovimento.proximoEstado,
+            simboloHistorico: estadoIntermediario,
+            movimento,
+            proximoEstado: estadoIntermediario,
+            texto: `(${quadruplaMovimento.proximoEstado}, {*, ${estadoIntermediario}, *}) = (${movimento}, ${estadoIntermediario})`,
+        });
+
+        novasQuadruplas.push({
+            tipo: 'escrever',
+            indiceTransicao: quadruplaMovimento.indiceTransicao,
+            estadoOrigem: estadoIntermediario,
+            simboloLido: quadruplaEscrita.simboloEscrito,
+            simboloEscrito: quadruplaEscrita.simboloLido,
+            proximoEstado: quadruplaEscrita.estadoOrigem,
+            texto: `(${estadoIntermediario}, ${quadruplaEscrita.simboloEscrito}) = (${quadruplaEscrita.simboloLido}, ${quadruplaEscrita.estadoOrigem})`,
+        });
+    });
+
+    quadruplasReversao.value = novasQuadruplas;
+}
+
+//volta os cabecotes para onde a computacao terminou e gera as quadruplas de reversao
+function prepararReconstrucao() {
+    gerarQuadruplasReversao();
+
+    let n = 0;
+    while (n < tamanhoFitaPadrao && fitaHistorico.value[n] !== 'B') {
+        n++;
+    }
+
+    //a posicao final do cabecote de entrada sai dos movimentos registrados no historico
+    let posicao = 0;
+    for (let i = 0; i < n; i++) {
+        const quadruplaMovimento = props.quadruplas.find(q => {
+            return (q.tipo === 'mover' && q.estadoIntermediario === fitaHistorico.value[i]);
+        });
+        if (quadruplaMovimento.movimento === 'R') {
+            posicao = Math.min(tamanhoFitaPadrao - 1, posicao + 1);
+        }
+        else if (quadruplaMovimento.movimento === 'L') {
+            posicao = Math.max(0, posicao - 1);
+        }
+    }
+
+    posicaoCabecoteEntrada.value = posicao;
+    posicaoCabecoteHistorico.value = Math.max(0, n - 1);
+    estadoAtual.value = estadoAceitacao.value;
+}
+
+function executarUmaTransicaoReversao() {
+    const simboloHistorico = fitaHistorico.value[posicaoCabecoteHistorico.value] ?? 'B';
+    if (simboloHistorico === 'B') {
+        faseExecucao.value = 4; //nada mais a desfazer
+        return false;
+    }
+
+    //busca primeira quadrupla
+    const quadruplaMovimento = quadruplasReversao.value.find(q => {
+        return (q.tipo === 'mover' && q.estadoOrigem === String(estadoAtual.value).trim() && q.simboloHistorico === simboloHistorico);
+    });
+    if (!quadruplaMovimento) {
+        alert(`Nenhuma transição de reversão encontrada para o estado ${estadoAtual.value} e histórico '${simboloHistorico}'.`);
+        return false;
+    }
+
+    let novaPosicaoEntrada = posicaoCabecoteEntrada.value;
+    if (quadruplaMovimento.movimento === 'R') {
+        novaPosicaoEntrada = Math.min(tamanhoFitaPadrao - 1, novaPosicaoEntrada + 1);
+    }
+    else if (quadruplaMovimento.movimento === 'L') {
+        novaPosicaoEntrada = Math.max(0, novaPosicaoEntrada - 1);
+    }
+
+    //busca segunda quadrupla
+    const simboloLido = fitaEntrada.value[novaPosicaoEntrada] ?? 'B';
+    const quadruplaEscrita = quadruplasReversao.value.find(q => {
+        return (q.tipo === 'escrever' && q.estadoOrigem === quadruplaMovimento.proximoEstado && q.simboloLido === String(simboloLido).trim());
+    });
+    if (!quadruplaEscrita) {
+        alert(`Nenhuma transição de reversão encontrada para o estado ${quadruplaMovimento.proximoEstado} e símbolo '${simboloLido}'.`);
+        return false;
+    }
+
+    //executa primeira quadrupla: desfaz o movimento e apaga a entrada do historico
+    posicaoCabecoteEntrada.value = novaPosicaoEntrada;
+
+    const novaFitaHistorico = [...fitaHistorico.value];
+    novaFitaHistorico[posicaoCabecoteHistorico.value] = 'B';
+    fitaHistorico.value = novaFitaHistorico;
+    posicaoCabecoteHistorico.value = Math.max(0, posicaoCabecoteHistorico.value - 1);
+
+    estadoAtual.value = quadruplaMovimento.proximoEstado;
+
+    //executa segunda quadrupla: restaura o simbolo que foi sobrescrito
+    const novaFitaEntrada = [...fitaEntrada.value];
+    novaFitaEntrada[posicaoCabecoteEntrada.value] = quadruplaEscrita.simboloEscrito;
+    fitaEntrada.value = novaFitaEntrada;
+
+    estadoAtual.value = quadruplaEscrita.proximoEstado;
+
+    if (fitaHistorico.value[posicaoCabecoteHistorico.value] === 'B') {
+        faseExecucao.value = 4;
+    }
+    return true;
+}
+
+function executarFaseReconstrucao(){
+    if (faseExecucao.value !== 3) {
+        return;
+    }
+
+    if (quadruplasReversao.value.length === 0) {
+        prepararReconstrucao();
+    }
+
+    let limitePassos = tamanhoFitaPadrao;
+    let passosExecutados = 0;
+
+    while (faseExecucao.value === 3 && passosExecutados < limitePassos) {
+        const executou = executarUmaTransicaoReversao();
+        if (!executou) {
+            break;
+        }
+        passosExecutados++;
+    }
+
+    if (passosExecutados >= limitePassos && faseExecucao.value !== 4) {
+        alert('A fase de reconstrução excedeu o limite de passos permitido.');
+        return;
+    }
+
+    if (faseExecucao.value === 4) {
+        console.log(`Reconstrução finalizada após ${passosExecutados} transições.`);
+    }
 }
 
 function executarMaq(){
     executarComputacaoCompleta()
     executarFaseCopia()
-    //criar outras funcoes para executar cada fase
+    executarFaseReconstrucao()
 }
 
 //limpa todas as fitas e inicializa a entrada
@@ -304,6 +458,7 @@ function reiniciarMaquina() {
     posicaoCabecoteSaida.value = 0;
 
     quadruplasCopia.value = [];
+    quadruplasReversao.value = [];
 
     estadoAtual.value = props.estados.length > 0 ? props.estados[0] : '';
 
@@ -325,7 +480,7 @@ function reiniciarMaquina() {
                 <span class="linha" :class="{'ativo': faseExecucao >= 2}"></span>
                 <Botao class="botao" :class="{'ativo': faseExecucao >= 2}" texto="2. Cópia"/>
                 <span class="linha" :class="{'ativo': faseExecucao >= 3}"></span>
-                <Botao class="botao" :class="{'ativo': faseExecucao >= 3}" texto="3. Reconstrução"/>
+                <Botao class="botao" :class="{'ativo': faseExecucao >= 3}" texto="3. Reconstrução" @acao="executarFaseReconstrucao"/>
             </div>
 
             <p>Controle</p>
@@ -344,7 +499,7 @@ function reiniciarMaquina() {
                 </div>
                 <div class="process">
                     <h3>Reversão</h3>
-                    <pre></pre>
+                    <pre>{{ quadruplasReversao.map(q => q.texto).join('\n') }}</pre>
                 </div>
             </div>
         </div>
